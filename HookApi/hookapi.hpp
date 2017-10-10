@@ -67,7 +67,7 @@
 #define	WINDOWS
 #ifdef _WIN64
 #define	X86_64
-#define	MIN_HOOK_SIZE	5
+#define	MIN_HOOK_SIZE	8
 #else
 #define	X86_32
 #define	MIN_HOOK_SIZE	5
@@ -213,9 +213,10 @@ namespace hookapi
 	//	ProcessCriticalSection(hookapi_guid);
 		(*hookmap())[api] = std::make_shared<hookutility>(api, shell);
 	}
-	inline void hook_unsafe(PVOID api, PVOID shell)
+	template<typename TShell>
+	inline void hook_unsafe(PVOID api, TShell shell)
 	{
-		hook(api, shell);
+		hook(api, *(void**)&shell);
 	}
 	inline void unhook(PVOID api)//eg. unhook(sleep);
 	{
@@ -236,8 +237,10 @@ namespace hookapi
 	//	ProcessCriticalSection(hookapi_guid);
 		for(auto k = hookmap()->begin(); hookmap()->end() != k; ++k)
 		{
-			if(k->second->get_detour() == (PVOID)shell)
-				return reinterpret_cast<F>(k->second->get_origin());
+			if (k->second->get_detour() == *(PVOID*)&shell) {
+				auto api = k->second->get_origin();
+				return *reinterpret_cast<F*>(&api);
+			}
 		}
 		return shell;
 	}
