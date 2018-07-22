@@ -50,15 +50,10 @@
 #pragma once
 
 #include <map>
-#include <boost/serialization/singleton.hpp>
-#include <boost/utility/result_of.hpp>
-#include <boost/thread.hpp>
-#include <boost/thread/recursive_mutex.hpp>
-#include <boost/noncopyable.hpp>
-#include <boost/lexical_cast.hpp>
 #include <math.h>
 #include <string>
 #include <tuple>
+#include <memory>
 #include <Windows.h>
 //#ifdef _DEBUG
 //#pragma comment(linker, "/nodefaultlib:libcmt.lib")
@@ -75,11 +70,9 @@
 
 #include <DynamoRIO/dr_api.h>
 
-using namespace boost::serialization;
-
 namespace hookapi
 {
-	class hookutility : boost::noncopyable
+	class hookutility
 	{
 	public:
 		hookutility(PVOID api, PVOID detour)
@@ -98,7 +91,6 @@ namespace hookapi
 	private:
 		void initialize(PVOID api, PVOID detour)
 		{
-			using namespace boost;
 			size_t hook_size = MIN_HOOK_SIZE;
 
 			m_api = reinterpret_cast<byte*>(api);
@@ -189,7 +181,7 @@ namespace hookapi
 		//Define the environment value to hold the address of the context in text form, since the environment value can only be text.
 		wchar_t env[64];
 		std::wstring key = L"46EBBDC3-EEDC-42D4-BA1D-D454DFCE8E42:";	//The context guid, in order to distinguish with other keys.
-		key += boost::lexical_cast<std::wstring, uint32_t>(GetCurrentProcessId());
+		key += std::to_wstring(GetCurrentProcessId());
 		if(GetEnvironmentVariableW(key.c_str(), env, _countof(env)))
 		{
 			//If SetEnvironmentVariable has been called, this branch must be achieved.
@@ -200,7 +192,8 @@ namespace hookapi
 
 		//Define the local static context to hold the process context, which is immediately registered to the environment value.
 		//static context_imply s_context;
-		p_hookmap = &boost::serialization::singleton<HookMap>::get_mutable_instance();
+		static HookMap instance;
+		p_hookmap = &instance;
 		_i64tow_s((size_t)p_hookmap, env, _countof(env), 10);
 		SetEnvironmentVariableW(key.c_str(), env);
 		return p_hookmap;
